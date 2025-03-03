@@ -12,6 +12,8 @@ void print_help(const char *prog_name) {
 }
 
 int main(int argc, char *argv[]) {
+    clock_t start, end;
+    start = clock();
     if (argc != 5) {
         print_help(argv[0]);
         return EXIT_FAILURE;
@@ -77,6 +79,8 @@ int main(int argc, char *argv[]) {
 
     free(buffer);
     close(fd);
-    printf("Successfully wrote %d blocks of %d bytes to %s.\n", num_blocks, block_size, filename);
+    end = clock();
+    double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
+    printf("Successfully wrote %d blocks of %d bytes to %s in %.6fs.\n", num_blocks, block_size, filename, time_taken);
     return EXIT_SUCCESS;
 }
