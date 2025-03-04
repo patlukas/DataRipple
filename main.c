@@ -1,14 +1,32 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <time.h>
+ #include <stdio.h>
+#include <stdlib.h> 
+#include <string.h> // strcmp, memset
+#include <fcntl.h> // open, O_WRONLY, O_CREAT, O_TRUNC
+#include <unistd.h> //write, close
+#include <stdbool.h> //true, false
+#include <time.h> // time, CLOCK_PER_SEC, 
+
 
 void print_help(const char *prog_name) {
-    printf("Usage: %s <output_file> <num_blocks> <block_size> <data_type: [0, 1, block_rand, all_rand]>\n", prog_name);
+    printf("Usage: %s <output_file> <num_blocks> <block_size in B; can add suffix: [K, M, G]> <data_type: [0, 1, block_rand, all_rand]>\n", prog_name);
+}
+
+int parse_block_size(const char *arg) {
+    char *endptr;
+    long value = strtol(arg, &endptr, 10);
+    
+    if (*endptr == '\0') {
+        return value;
+    } else if (*endptr == 'K' || *endptr == 'k') {
+        return value * 1024;
+    } else if (*endptr == 'M' || *endptr == 'm') {
+        return value * 1024 * 1024;
+    } else if (*endptr == 'G' || *endptr == 'g') {
+        return value * 1024 * 1024 * 1024;
+    } else {
+        printf("Error: Invalid block size suffix: %s\n", arg);
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -22,7 +40,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     const char *filename = argv[1];
     int num_blocks = atoi(argv[2]);
-    int block_size = atoi(argv[3]);
+    int block_size = parse_block_size(argv[3]);
     char *data_type = argv[4];
 
     if (num_blocks <= 0 || block_size <= 0) {
