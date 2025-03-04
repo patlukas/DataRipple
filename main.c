@@ -8,7 +8,7 @@
 
 
 void print_help(const char *prog_name) {
-    printf("Usage: %s <output_file> <num_blocks> <block_size in B; can add suffix: [K, M, G]> <data_type: [0, 1, block_rand, all_rand]>\n", prog_name);
+    printf("Usage: %s <output_file> <num_blocks can add suffix: [K, M, G]> <block_size in B; can add suffix: [K, M, G]> <data_type: [0, 1, block_rand, all_rand]>\n", prog_name);
 }
 
 int parse_block_size(const char *arg) {
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 
     srand(time(NULL));
     const char *filename = argv[1];
-    int num_blocks = atoi(argv[2]);
+    int num_blocks = parse_block_size(argv[2]);
     int block_size = parse_block_size(argv[3]);
     char *data_type = argv[4];
 
