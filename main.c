@@ -29,8 +29,39 @@ int parse_block_size(const char *arg) {
     }
 }
 
+void print_result(int all_num_blocks, int num_blocks, int block_size, const char *filename, clock_t time_start) {
+    clock_t end = clock();
+    double time_taken = (double)(end - time_start) / CLOCKS_PER_SEC;
+    char total_bytes_unit;
+    long total_bytes = (long) num_blocks * block_size;
+    double total_bytes_in_unit = (double) total_bytes;
+    if (total_bytes_in_unit < 1024) {
+        total_bytes_unit = ' ';
+    } else if (total_bytes_in_unit < 1024*1024) {
+        total_bytes_in_unit /= 1024;
+        total_bytes_unit = 'K';
+    } else if (total_bytes_in_unit < 1024*1024*1024) {
+        total_bytes_in_unit /= (1024*1024);
+        total_bytes_unit = 'M';
+    } else {
+        total_bytes_in_unit /= (1024*1024*1024);
+        total_bytes_unit = 'G';
+    }
+
+    if (num_blocks == all_num_blocks) {
+        printf("Success: ");
+    }
+    else {
+        printf("Error: ");
+    }
+    printf(
+        "Wrote %d blocks of %dB, saving a total of %.2f%cB (%ldB) to %s in %.6f s.\n", 
+        num_blocks, block_size, total_bytes_in_unit, total_bytes_unit, total_bytes, filename, time_taken
+    );
+}
+
 int main(int argc, char *argv[]) {
-    clock_t start, end;
+    clock_t start;
     start = clock();
     if (argc != 5) {
         print_help(argv[0]);
@@ -48,7 +79,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC);
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd == -1) {
         printf("Error: Can't open file");
         return EXIT_FAILURE;
@@ -89,6 +120,7 @@ int main(int argc, char *argv[]) {
 
         if (write(fd, buffer, block_size) != block_size) {
             printf("Error: error while writing to file");
+            print_result(num_blocks, i, block_size, filename, start);
             free(buffer);
             close(fd);
             return EXIT_FAILURE;
@@ -97,8 +129,6 @@ int main(int argc, char *argv[]) {
 
     free(buffer);
     close(fd);
-    end = clock();
-    double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
-    printf("Successfully wrote %d blocks of %d bytes to %s in %.6fs.\n", num_blocks, block_size, filename, time_taken);
+    print_result(num_blocks, num_blocks, block_size, filename, start);
     return EXIT_SUCCESS;
 }
