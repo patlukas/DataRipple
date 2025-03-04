@@ -8,7 +8,7 @@
 
 
 void print_help(const char *prog_name) {
-    printf("Usage: %s <output_file> <num_blocks can add suffix: [K, M, G]> <block_size in B; can add suffix: [K, M, G]> <data_type: [0, 1, block_rand, all_rand]>\n", prog_name);
+    printf("Usage: %s <output_file> <num_blocks can add suffix: [K, M, G]> <block_size in B; can add suffix: [K, M, G]> <data_type: [0, 1, block_rand | br, all_rand | r, all_urand | u]>\n", prog_name);
 }
 
 int parse_block_size(const char *arg) {
@@ -55,7 +55,7 @@ void print_result(int all_num_blocks, int num_blocks, int block_size, const char
         printf("Error: ");
     }
     printf(
-        "Wrote %d blocks of %dB, saving a total of %.2f%cB (%ldB) to %s in %.6f s.\n", 
+        "Wrote %d blocks of %dB, saving a total of %.2f%cB (%ldB) to %s in %.6fs.\n", 
         num_blocks, block_size, total_bytes_in_unit, total_bytes_unit, total_bytes, filename, time_taken
     );
 }
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
         printf("Error: num_blocks and block_size must be >0\n");
         return EXIT_FAILURE;
     }
-
+    int fd_urandom;
     int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd == -1) {
         printf("Error: Can't open file");
@@ -93,28 +93,50 @@ int main(int argc, char *argv[]) {
     }
 
     bool is_all_random_mode = false;
+    bool is_all_urandom_mode = false;
 
     if (strcmp(data_type, "0") == 0) {
         memset(buffer, 0, block_size);
     } else if (strcmp(data_type, "1") == 0) {
         memset(buffer, 0xFF, block_size);
-    } else if (strcmp(data_type, "block_rand") == 0) {
+    } else if (strcmp(data_type, "block_rand") == 0 || strcmp(data_type, "br") == 0) {
         for (int i = 0; i < block_size; i++) {
             buffer[i] = rand() % 256;
         }
-    } else if (strcmp(data_type, "all_rand") == 0) {
+    } else if (strcmp(data_type, "all_rand") == 0 || strcmp(data_type, "r") == 0) {
         is_all_random_mode = true;
-    }else {
+    } else if (strcmp(data_type, "all_urand") == 0 || strcmp(data_type, "u") == 0) {
+        is_all_urandom_mode = true;
+    } else {
         printf("Error: Invalid data_type. Use '0', '1', or 'rand'.\n");
         free(buffer);
         close(fd);
         return EXIT_FAILURE;
     }
 
+    if (is_all_urandom_mode) {
+        fd_urandom = open("/dev/urandom", O_RDONLY);
+        if (fd_urandom == -1) {
+            printf("Error: error while opening /dev/urandom");
+            free(buffer);
+            close(fd);
+            exit(EXIT_FAILURE);
+        }
+    }
+
     for (int i = 0; i < num_blocks; i++) {
         if (is_all_random_mode) {
             for (int j = 0; j < block_size; j++) {
                 buffer[j] = rand() % 256;
+            }
+        } else if (is_all_urandom_mode) {
+            int bytes_read = read(fd_urandom, buffer, block_size);
+            if (bytes_read != block_size) {
+                printf("Error: reading from /dev/urandom");
+                close(fd_urandom);
+                free(buffer);
+                close(fd);
+                exit(EXIT_FAILURE);
             }
         }
 
@@ -123,12 +145,14 @@ int main(int argc, char *argv[]) {
             print_result(num_blocks, i, block_size, filename, start);
             free(buffer);
             close(fd);
+            if(is_all_urandom_mode) close(fd_urandom);
             return EXIT_FAILURE;
         }
     }
 
     free(buffer);
     close(fd);
+    if(is_all_urandom_mode) close(fd_urandom);
     print_result(num_blocks, num_blocks, block_size, filename, start);
     return EXIT_SUCCESS;
 }
